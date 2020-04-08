@@ -1,0 +1,10 @@
+[all:vars]
+
+ansible_user=root
+
+[master]
+64.227.74.73
+
+[slaves]
+64.225.74.244
+64.227.74.41

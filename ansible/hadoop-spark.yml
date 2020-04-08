@@ -1,0 +1,28 @@
+- hosts: all
+  become: yes
+  tasks:
+    - name: Install ssh server
+      apt:
+        name: openssh-server
+        state: present
+        update_cache: yes
+    - name: Install java
+      apt:
+        name: openjdk-8-jdk
+        state: present
+        update_cache: yes
+- hosts: master
+  become: yes
+  tasks:
+    - name: Generate ssh key pair
+      openssh_keypair:
+        path: "~/.ssh/id_rsa"
+      register: master_openssh_keypair
+- hosts: slaves
+  become: yes
+  tasks:
+    - name: Add master key to authorized keys
+      authorized_key:
+        user: slave_user
+        key: "{{ master_openssh_keypair[public_key] }}"
+      
