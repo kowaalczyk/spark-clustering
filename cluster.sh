@@ -55,9 +55,22 @@ function up() {
         doctl projects resources assign "$DO_PROJECT_ID" --resource "do:droplet:$droplet"
     done
     
-    while [[ -z "$(doctl compute droplet ls --tag-name "$DO_DROPLET_TAG" --format "PublicIPv4" --no-header)" ]]; do
-        sleep 2
+    echo ""
+    echo "Waiting for IP assignment..."
+    n_droplets=$(echo "$droplets" | wc -w | tr -d ' ')
+    n_ready_droplets=$(doctl compute droplet ls \
+        --tag-name "$DO_DROPLET_TAG" \
+        --format "PublicIPv4" \
+        --no-header | wc -w | tr -d '\blank')
+    while [[ "$n_ready_droplets" -lt "$n_droplets" ]]; do
+        echo "$n_ready_droplets out of $n_droplets..."
+        sleep 3
+        n_ready_droplets=$(doctl compute droplet ls \
+            --tag-name "$DO_DROPLET_TAG" \
+            --format "PublicIPv4" \
+            --no-header | wc -w | tr -d '\blank')
     done
+
     echo ""
     status
 }
