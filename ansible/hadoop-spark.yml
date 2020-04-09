@@ -17,12 +17,13 @@
     - name: Generate ssh key pair
       openssh_keypair:
         path: "~/.ssh/id_rsa"
-      register: master_openssh_keypair
+      register: ssh_key
+    - debug:
+        var: ssh_key
 - hosts: slaves
   become: yes
   tasks:
     - name: Add master key to authorized keys
       authorized_key:
-        user: slave_user
-        key: "{{ master_openssh_keypair[public_key] }}"
-      
+        user: root
+        key: "{{ hostvars[groups['master'][0]]['ssh_key']['public_key'] }}"

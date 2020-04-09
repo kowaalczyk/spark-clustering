@@ -10,6 +10,10 @@ This repo contains:
 - use `cluster.sh` to set up / tear down a bunch of droplets on Digital Ocean
 - use ansible with configuration files in `ansible/*` folder to install necessary software
 
+```shell
+ansible-playbook -i ansible/hosts ansible/hadoop-spark.yml
+```
+
 
 ## Clustering human proteins
 
