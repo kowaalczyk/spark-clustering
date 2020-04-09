@@ -1,0 +1,126 @@
+- hosts: all
+  become: yes
+  vars_files:
+    - variables.yml
+  vars:
+    master_host: "{{ groups['master'][0] }}"
+    slaves: "{{ groups['slaves'] }}"
+  environment:
+    JAVA_HOME: "{{ paths.java }}"
+    HADOOP_HOME: "{{ paths.hadoop }}"
+    HADOOP_PREFIX: "{{ paths.hadoop }}"
+    HADOOP_INSTALL: "{{ paths.hadoop }}"
+    HADOOP_MAPRED_HOME: "{{ paths.hadoop }}"
+    HADOOP_COMMON_HOME: "{{ paths.hadoop }}"
+    HADOOP_HDFS_HOME: "{{ paths.hadoop }}"
+    YARN_HOME: "{{ paths.hadoop }}"
+    HADOOP_COMMON_LIB_NATIVE_DIR: "{{ paths.hadoop }}/lib/native"
+    HADOOP_OPTS: "-Djava.library.path={{ paths.hadoop }}/lib/native"
+    PATH: "{{ ansible_env.PATH }}:{{ paths.hadoop }}/sbin:{{ paths.hadoop }}/bin"
+  tasks:
+    - name: Install ssh server
+      apt:
+        name: openssh-server
+        state: present
+        update_cache: yes
+    - name: Copy ssh config
+      copy:
+        src: "all/ssh/config"
+        dest: "~/.ssh/config"
+    - name: Install java
+      apt:
+        name: openjdk-8-jdk
+        state: present
+        update_cache: yes
+    - name: Copy & extract Hadoop
+      unarchive:
+        src: "all/{{ hadoop }}.tgz"
+        dest: "{{ prefix }}"
+        creates: "{{ paths.hadoop }}"
+    - name: Create directories for NameNode and DataNode
+      file:
+        path: "{{ paths.hdfs }}/{{ item }}"
+        state: directory
+        mode: "0755"
+      with_items:
+        - "namenode"
+        - "datanode"
+    - name: Change defaults in hadoop-env.sh
+      replace:
+        path: "{{ paths.hadoop }}/etc/hadoop/hadoop-env.sh"
+        regexp: '{{ item.from }}'
+        replace: '{{ item.to }}'
+      with_items:
+        - from: '^export JAVA_HOME=\${JAVA_HOME}'
+          to: 'export JAVA_HOME={{ ansible_env.JAVA_HOME }}'
+        - from: '/etc/hadoop'
+          to: '{{ paths.hadoop }}/etc/hadoop'
+    - name: Create hadoop config files
+      template:
+        src: "all/hadoop/{{ item }}.j2"
+        dest: "{{ paths.hadoop }}/etc/hadoop/{{ item }}"
+      with_items:
+        - "hadoop-env.sh"
+        - "core-site.xml"
+        - "hdfs-site.xml"
+        - "mapred-site.xml"
+        - "yarn-site.xml"
+        - "slaves"
+
+- hosts: master
+  become: yes
+  vars_files:
+    - variables.yml
+  tasks:
+    - name: Generate ssh key pair
+      openssh_keypair:
+        path: "~/.ssh/id_rsa"
+      register: ssh_key
+    - name: Copy & extract Spark
+      unarchive:
+        src: "master/{{ spark }}.tgz"
+        dest: "{{ prefix }}"
+        creates: "{{ paths.spark }}"
+
+- hosts: slaves
+  become: yes
+  vars:
+    master_host: "{{ groups['master'][0] }}"
+  vars_files:
+    - variables.yml
+  tasks:
+    - name: Add master key to authorized keys
+      authorized_key:
+        user: root
+        key: "{{ hostvars[master_host]['ssh_key']['public_key'] }}"
+
+- hosts: all
+  become: yes
+  vars_files:
+    - variables.yml
+  environment:
+    JAVA_HOME: "{{ paths.java }}"
+    HADOOP_HOME: "{{ paths.hadoop }}"
+    HADOOP_PREFIX: "{{ paths.hadoop }}"
+    HADOOP_INSTALL: "{{ paths.hadoop }}"
+    HADOOP_MAPRED_HOME: "{{ paths.hadoop }}"
+    HADOOP_COMMON_HOME: "{{ paths.hadoop }}"
+    HADOOP_HDFS_HOME: "{{ paths.hadoop }}"
+    YARN_HOME: "{{ paths.hadoop }}"
+    HADOOP_COMMON_LIB_NATIVE_DIR: "{{ paths.hadoop }}/lib/native"
+    HADOOP_OPTS: "-Djava.library.path={{ paths.hadoop }}/lib/native"
+    PATH: "{{ ansible_env.PATH }}:{{ paths.hadoop }}/sbin:{{ paths.hadoop }}/bin"
+  tasks:
+    - name: Restart ssh server with new config
+      service:
+        name: ssh
+        state: restarted
+    - name: Debug printenv
+      command: printenv
+      register: printenv
+    - debug:
+        var: printenv
+    # - name: Run HDFS
+    #   # TODO: Command
+    #   environment:
+    #     PATH: "{{ ansible_env.PATH }}:{{ node_path_suffix }}"
