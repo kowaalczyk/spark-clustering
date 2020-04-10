@@ -6,8 +6,9 @@ spark_version: "spark-2.4.5"
 paths:
   java: "/usr/lib/jvm/java-8-openjdk-amd64"
   hadoop: "{{ prefix }}/{{ hadoop_version }}"
-  spark: "{{ prefix }}/{{ spark_version }}-bin-without-hadoop"
   hdfs: "/hdfsdata"
+  spark: "{{ prefix }}/{{ spark_version }}-bin-without-hadoop"
+  jupyter_notebooks: "{{ prefix }}/notebooks"
 # https://docs.cloudera.com/HDPDocuments/HDP2/HDP-2.6.4/bk_command-line-installation/content/determine-hdp-memory-config.html
 node_config:
   # for 2x 4GB RAM instances
@@ -17,7 +18,7 @@ node_config:
   mapreduce_reduce_java_heap_size: 5120  # ~80% of mapreduce_reduce_memory
   yarn_resource_memory: 7168
   yarn_scheduler_min_allocation_memory: 512
-  yarn_scheduler_max_allocation_memory: 7680
+  yarn_scheduler_max_allocation_memory: 7168
 # node_config:
 #   # for 8GB RAM instances
 #   mapreduce_map_memory: 7168
@@ -26,4 +27,4 @@ node_config:
 #   mapreduce_reduce_java_heap_size: 12288  # ~80% of mapreduce_reduce_memory
 #   yarn_resource_memory: 15360
 #   yarn_scheduler_min_allocation_memory: 1024
-#   yarn_scheduler_max_allocation_memory: 15872
+#   yarn_scheduler_max_allocation_memory: 15360

@@ -1,4 +1,4 @@
-# install hadoop and spark
+# install hadoop
 - hosts: all
   become: yes
   vars_files:
@@ -104,6 +104,7 @@
         proto: tcp
         state: reloaded
       with_items:
+        - "8888"  # pyspark jupyter notebook
         - "8088"
         - "50070"
         - "50090"
@@ -138,6 +139,7 @@
         src: "{{ item }}"
         state: reloaded
       with_items: "{{ slave_hosts + [master_host] }}"
+
 # start hdfs
 - hosts: master
   become: yes
@@ -193,7 +195,7 @@
         - debug:
             var: dfsadmin_log.stdout_lines
 
-# start spark
+# install python, spark and pyspark + run jupyter notebook
 - hosts: master
   become: yes
   vars_files:
@@ -209,29 +211,82 @@
     YARN_HOME: "{{ paths.hadoop }}"
     HADOOP_COMMON_LIB_NATIVE_DIR: "{{ paths.hadoop }}/lib/native"
     HADOOP_OPTS: "-Djava.library.path={{ paths.hadoop }}/lib/native"
-    PATH: "{{ paths.spark }}/bin:{{ ansible_env.PATH }}:{{ paths.hadoop }}/sbin:{{ paths.hadoop }}/bin"
+    PATH: "{{ ansible_env.PATH }}:~/.local/bin:{{ paths.hadoop }}/sbin:{{ paths.hadoop }}/bin"
     YARN_CONF_DIR: "{{ paths.hadoop }}/etc/hadoop"
     SPARK_HOME: "{{ paths.spark }}"
   tasks:
-    - name: Debug printenv
-      command: printenv
-      register: printenv
-    - debug:
-        var: printenv.stdout_lines
     - name: Download & extract Spark
       unarchive:
         remote_src: yes
         src: "{{ apache_download_proxy }}/spark/{{ spark_version }}/{{ spark_version }}-bin-without-hadoop.tgz"
         dest: "{{ prefix }}"
         creates: "{{ paths.spark }}"
+    - name: Install python
+      apt:
+        name:
+          - "python3"
+          - "python3-pip"
+        state: present
+        update_cache: yes
+    - name: Install python packages
+      pip:
+        executable: pip3
+        name:
+          - "jupyter"
+          - "numpy"
+          - "py4j"
+    - name: Create workdir for jupyter
+      file:
+        path: "{{ paths.jupyter_notebooks }}"
+        state: directory
+        mode: "0755"
     - name: Get hadoop classpath
       command: "hdfs classpath"
       register: hdfs_classpath
-    # TODO: Deploy and run the application instead
-    - name: Run spark example
+    - name: Get environment for jupyter service
       environment:
+        PATH: "{{ paths.spark }}:{{ paths.spark }}/bin:{{ ansible_env.PATH }}:{{ paths.java }}/bin:{{ paths.java }}/jre/bin"
         SPARK_DIST_CLASSPATH: "{{ hdfs_classpath.stdout }}"
-      script: "master/run-spark-example.sh"
-      register: example
+        PYTHONPATH: "{{ paths.spark }}/python"  # no pre-existing PYTHONPATH
+        PYSPARK_DRIVER_PYTHON: "jupyter"
+        PYSPARK_DRIVER_PYTHON_OPTS: "notebook --allow-root --port=8888 --no-browser --notebook-dir={{ paths.jupyter_notebooks }} --ip=0.0.0.0"
+        PYSPARK_PYTHON: "python3"
+      shell: "printenv | grep 'PATH\\|SPARK\\|PYTHON\\|HADOOP\\|JAVA'"
+      register: printenv
     - debug:
-        var: example.stdout_lines
+        var: printenv.stdout_lines
+    - name: Create env file for jupyter service
+      copy:
+        content: '{{ printenv.stdout }}'
+        dest: "/etc/systemd/system/jupyter.env"
+    - name: Create jupyter service
+      # https://programming.vip/docs/running-jupyter-jupyterhub-jupyterlab-as-a-system-service.html
+      vars:
+        jupyter_cmd: "{{ paths.spark }}/bin/pyspark"
+      template:
+        src: "master/jupyter.service.j2"
+        dest: "/etc/systemd/system/jupyter.service"
+    - name: Start jupyter service
+      systemd:
+        name: jupyter
+        state: restarted
+        daemon_reload: yes
+        enabled: yes  # start on boot
+    - pause:
+        seconds: 10
+    - name: Get jupyter logs with password/token
+      command: "systemctl status jupyter --no-pager"
+      register: jupyter_logs
+    - debug:
+        var: jupyter_logs.stdout_lines
+    # TODO: Deploy and run the application instead:
+    # - name: Get hadoop classpath
+    #   command: "hdfs classpath"
+    #   register: hdfs_classpath
+    # - name: Run spark example
+    #   environment:
+    #     SPARK_DIST_CLASSPATH: "{{ hdfs_classpath.stdout }}"
+    #   script: "master/run-spark-example.sh"
+    #   register: example
+    # - debug:
+    #     var: example.stdout_lines
