@@ -58,13 +58,6 @@
         - "mapred-site.xml"
         - "yarn-site.xml"
         - "slaves"
-    - name: Download & extract Spark
-      unarchive:
-        remote_src: yes
-        src: "{{ apache_download_proxy }}/spark/{{ spark_version }}/{{ spark_version }}-bin-without-hadoop.tgz"
-        dest: "{{ prefix }}"
-        creates: "{{ paths.spark }}"
-        
 
 # generate ssh key for hadoop
 - hosts: master
@@ -89,24 +82,62 @@
       authorized_key:
         user: root
         key: "{{ hostvars[master_host]['ssh_key']['public_key'] }}"
-    - name: Enable firewall
+    - name: Enable firewall with ssh
       ufw:
+        rule: allow
+        port: ssh
         state: enabled
-    - name: Open ports in firewall
+    - name: Restart ssh server with new config
+      service:
+        name: ssh
+        state: restarted
+- hosts: master
+  become: yes
+  vars:
+    master_host: "{{ groups['master'][0] }}"
+    slave_hosts: "{{ groups['slaves'] }}"
+  tasks:
+    - name: Open GUI ports to the public
       ufw:
         rule: allow
         port: "{{ item }}"
         proto: tcp
         state: reloaded
       with_items:
-        - '22'
-        - '9000'
-        - '50070'
-    - name: Restart ssh server with new config
-      service:
-        name: ssh
-        state: restarted
-
+        - "8088"
+        - "50070"
+        - "50090"
+    - name: Open all ports to slaves and master
+      ufw:
+        rule: allow
+        src: "{{ item }}"
+        state: reloaded
+      with_items: "{{ slave_hosts + [master_host] }}"
+    - name: Debug ufw status
+      command: "ufw status verbose"
+      register: ufw_status
+    - debug:
+        var: ufw_status
+- hosts: slaves
+  become: yes
+  vars:
+    master_host: "{{ groups['master'][0] }}"
+    slave_hosts: "{{ groups['slaves'] }}"
+  tasks:
+    - name: Open GUI ports to the public
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+        state: reloaded
+      with_items:
+        - "50075"
+    - name: Open all ports to slaves and master
+      ufw:
+        rule: allow
+        src: "{{ item }}"
+        state: reloaded
+      with_items: "{{ slave_hosts + [master_host] }}"
 # start hdfs
 - hosts: master
   become: yes
@@ -130,20 +161,77 @@
       register: printenv
     - debug:
         var: printenv
-    - name: Format HDFS Namenode
-      command: "echo 'Y' | hdfs namenode -format"
-    - name: Start DFS
-      command: start-dfs.sh
-      register: dfs_log
+    - name: Start HDFS if not running
+      block:
+        - name: Generate DFS Admin report
+          command: "hdfs dfsadmin -report"
+          register: dfsadmin_log
+        - debug:
+            var: dfsadmin_log.stdout_lines
+      rescue:
+        - name: Clear tmp
+          command:
+            cmd: "rm -rf /tmp/*"
+            removes: "/tmp/*"
+        - name: Format HDFS Namenode
+          command: "hdfs namenode -format"
+        - name: Start DFS
+          command: start-dfs.sh
+          register: dfs_log
+        - debug:
+            var: dfs_log.stdout_lines
+        - name: Start Yarn
+          command: start-yarn.sh
+          register: yarn_log
+        - debug:
+            var: yarn_log.stdout_lines
+        - pause:
+            seconds: 30
+        - name: Generate DFS Admin report
+          command: "hdfs dfsadmin -report"
+          register: dfsadmin_log
+        - debug:
+            var: dfsadmin_log.stdout_lines
+
+# start spark
+- hosts: master
+  become: yes
+  vars_files:
+    - variables.yml
+  environment:
+    JAVA_HOME: "{{ paths.java }}"
+    HADOOP_HOME: "{{ paths.hadoop }}"
+    HADOOP_PREFIX: "{{ paths.hadoop }}"
+    HADOOP_INSTALL: "{{ paths.hadoop }}"
+    HADOOP_MAPRED_HOME: "{{ paths.hadoop }}"
+    HADOOP_COMMON_HOME: "{{ paths.hadoop }}"
+    HADOOP_HDFS_HOME: "{{ paths.hadoop }}"
+    YARN_HOME: "{{ paths.hadoop }}"
+    HADOOP_COMMON_LIB_NATIVE_DIR: "{{ paths.hadoop }}/lib/native"
+    HADOOP_OPTS: "-Djava.library.path={{ paths.hadoop }}/lib/native"
+    PATH: "{{ paths.spark }}/bin:{{ ansible_env.PATH }}:{{ paths.hadoop }}/sbin:{{ paths.hadoop }}/bin"
+    YARN_CONF_DIR: "{{ paths.hadoop }}/etc/hadoop"
+    SPARK_HOME: "{{ paths.spark }}"
+  tasks:
+    - name: Debug printenv
+      command: printenv
+      register: printenv
     - debug:
-        var: dfs_log.stdout_lines
-    - name: Start Yarn
-      command: start-yarn.sh
-      register: yarn_log
+        var: printenv.stdout_lines
+    - name: Download & extract Spark
+      unarchive:
+        remote_src: yes
+        src: "{{ apache_download_proxy }}/spark/{{ spark_version }}/{{ spark_version }}-bin-without-hadoop.tgz"
+        dest: "{{ prefix }}"
+        creates: "{{ paths.spark }}"
+    - name: Get hadoop classpath
+      command: "hdfs classpath"
+      register: hdfs_classpath
+    # TODO: Deploy and run the application instead
+    - name: Run spark example
+      environment:
+        SPARK_DIST_CLASSPATH: "{{ hdfs_classpath.stdout }}"
+      script: "master/run-spark-example.sh"
+      register: example
     - debug:
-        var: yarn_log.stdout_lines
-    - name: Generate DFS Admin report
-      command: "sleep 30; hdfs dfsadmin -report"
-      register: dfsadmin_log
-    - debug:
-        var: dfsadmin_log.stdout_lines
+        var: example.stdout_lines
