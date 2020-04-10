@@ -1,3 +1,4 @@
+# install hadoop and spark
 - hosts: all
   become: yes
   vars_files:
@@ -32,9 +33,10 @@
         name: openjdk-8-jdk
         state: present
         update_cache: yes
-    - name: Copy & extract Hadoop
+    - name: Download & extract Hadoop
       unarchive:
-        src: "all/{{ hadoop }}.tgz"
+        remote_src: yes
+        src: "{{ apache_download_proxy }}/hadoop/common/{{ hadoop_version }}/{{ hadoop_version }}.tar.gz"
         dest: "{{ prefix }}"
         creates: "{{ paths.hadoop }}"
     - name: Create directories for NameNode and DataNode
@@ -45,16 +47,6 @@
       with_items:
         - "namenode"
         - "datanode"
-    - name: Change defaults in hadoop-env.sh
-      replace:
-        path: "{{ paths.hadoop }}/etc/hadoop/hadoop-env.sh"
-        regexp: '{{ item.from }}'
-        replace: '{{ item.to }}'
-      with_items:
-        - from: '^export JAVA_HOME=\${JAVA_HOME}'
-          to: 'export JAVA_HOME={{ ansible_env.JAVA_HOME }}'
-        - from: '/etc/hadoop'
-          to: '{{ paths.hadoop }}/etc/hadoop'
     - name: Create hadoop config files
       template:
         src: "all/hadoop/{{ item }}.j2"
@@ -66,7 +58,15 @@
         - "mapred-site.xml"
         - "yarn-site.xml"
         - "slaves"
+    - name: Download & extract Spark
+      unarchive:
+        remote_src: yes
+        src: "{{ apache_download_proxy }}/spark/{{ spark_version }}/{{ spark_version }}-bin-without-hadoop.tgz"
+        dest: "{{ prefix }}"
+        creates: "{{ paths.spark }}"
+        
 
+# generate ssh key for hadoop
 - hosts: master
   become: yes
   vars_files:
@@ -76,13 +76,9 @@
       openssh_keypair:
         path: "~/.ssh/id_rsa"
       register: ssh_key
-    - name: Copy & extract Spark
-      unarchive:
-        src: "master/{{ spark }}.tgz"
-        dest: "{{ prefix }}"
-        creates: "{{ paths.spark }}"
 
-- hosts: slaves
+# configure access between nodes
+- hosts: all
   become: yes
   vars:
     master_host: "{{ groups['master'][0] }}"
@@ -93,8 +89,26 @@
       authorized_key:
         user: root
         key: "{{ hostvars[master_host]['ssh_key']['public_key'] }}"
+    - name: Enable firewall
+      ufw:
+        state: enabled
+    - name: Open ports in firewall
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+        state: reloaded
+      with_items:
+        - '22'
+        - '9000'
+        - '50070'
+    - name: Restart ssh server with new config
+      service:
+        name: ssh
+        state: restarted
 
-- hosts: all
+# start hdfs
+- hosts: master
   become: yes
   vars_files:
     - variables.yml
@@ -111,16 +125,25 @@
     HADOOP_OPTS: "-Djava.library.path={{ paths.hadoop }}/lib/native"
     PATH: "{{ ansible_env.PATH }}:{{ paths.hadoop }}/sbin:{{ paths.hadoop }}/bin"
   tasks:
-    - name: Restart ssh server with new config
-      service:
-        name: ssh
-        state: restarted
     - name: Debug printenv
       command: printenv
       register: printenv
     - debug:
         var: printenv
-    # - name: Run HDFS
-    #   # TODO: Command
-    #   environment:
-    #     PATH: "{{ ansible_env.PATH }}:{{ node_path_suffix }}"
+    - name: Format HDFS Namenode
+      command: "echo 'Y' | hdfs namenode -format"
+    - name: Start DFS
+      command: start-dfs.sh
+      register: dfs_log
+    - debug:
+        var: dfs_log.stdout_lines
+    - name: Start Yarn
+      command: start-yarn.sh
+      register: yarn_log
+    - debug:
+        var: yarn_log.stdout_lines
+    - name: Generate DFS Admin report
+      command: "sleep 30; hdfs dfsadmin -report"
+      register: dfsadmin_log
+    - debug:
+        var: dfsadmin_log.stdout_lines

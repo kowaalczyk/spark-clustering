@@ -1,11 +1,12 @@
 # variables shared by all plays in the playbook.yml
+apache_download_proxy: "http://ftp.man.poznan.pl/apache"
 prefix: "/usr/src"
-hadoop: "hadoop-2.8.5"
-spark: "spark-2.4.5-bin-without-hadoop"
+hadoop_version: "hadoop-2.8.5"
+spark_version: "spark-2.4.5"
 paths:
   java: "/usr/lib/jvm/java-8-openjdk-amd64"
-  hadoop: "{{ prefix }}/{{ hadoop }}"
-  spark: "{{ prefix }}/{{ spark }}"
+  hadoop: "{{ prefix }}/{{ hadoop_version }}"
+  spark: "{{ prefix }}/{{ spark_version }}-bin-without-hadoop"
   hdfs: "/hdfsdata"
 node_config:
   # for 4GB RAM instances
