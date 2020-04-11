@@ -19,6 +19,9 @@
     HADOOP_OPTS: "-Djava.library.path={{ paths.hadoop }}/lib/native"
     PATH: "{{ ansible_env.PATH }}:{{ paths.hadoop }}/sbin:{{ paths.hadoop }}/bin"
   tasks:
+    - name: Set hostname to prevent yarn nodemanager connection errors
+      hostname:
+        name: "{{ inventory_hostname }}"
     - name: Install ssh server
       apt:
         name: openssh-server
@@ -105,6 +108,7 @@
         state: reloaded
       with_items:
         - "8888"  # pyspark jupyter notebook
+        - "4040"  # spark ui port
         - "8088"
         - "50070"
         - "50090"
@@ -156,6 +160,7 @@
     YARN_HOME: "{{ paths.hadoop }}"
     HADOOP_COMMON_LIB_NATIVE_DIR: "{{ paths.hadoop }}/lib/native"
     HADOOP_OPTS: "-Djava.library.path={{ paths.hadoop }}/lib/native"
+    LD_LIBRARY_PATH: "{{ paths.hadoop }}/lib/native"
     PATH: "{{ ansible_env.PATH }}:{{ paths.hadoop }}/sbin:{{ paths.hadoop }}/bin"
   tasks:
     - name: Debug printenv
@@ -211,6 +216,7 @@
     YARN_HOME: "{{ paths.hadoop }}"
     HADOOP_COMMON_LIB_NATIVE_DIR: "{{ paths.hadoop }}/lib/native"
     HADOOP_OPTS: "-Djava.library.path={{ paths.hadoop }}/lib/native"
+    LD_LIBRARY_PATH: "{{ paths.hadoop }}/lib/native"
     PATH: "{{ ansible_env.PATH }}:~/.local/bin:{{ paths.hadoop }}/sbin:{{ paths.hadoop }}/bin"
     YARN_CONF_DIR: "{{ paths.hadoop }}/etc/hadoop"
     SPARK_HOME: "{{ paths.spark }}"
@@ -234,6 +240,8 @@
         name:
           - "jupyter"
           - "numpy"
+          - "pandas"
+          - "matplotlib"
           - "py4j"
     - name: Create workdir for jupyter
       file:
@@ -262,7 +270,8 @@
     - name: Create jupyter service
       # https://programming.vip/docs/running-jupyter-jupyterhub-jupyterlab-as-a-system-service.html
       vars:
-        jupyter_cmd: "{{ paths.spark }}/bin/pyspark"
+        # TODO: Debug these options on the larger instance (get as much ram and cores as possible)
+        jupyter_cmd: "{{ paths.spark }}/bin/pyspark --master yarn --executor-cores 2 --num-executors 2 --executor-memory 3G"
       template:
         src: "master/jupyter.service.j2"
         dest: "/etc/systemd/system/jupyter.service"
@@ -280,13 +289,11 @@
     - debug:
         var: jupyter_logs.stdout_lines
     # TODO: Deploy and run the application instead:
-    # - name: Get hadoop classpath
-    #   command: "hdfs classpath"
-    #   register: hdfs_classpath
-    # - name: Run spark example
-    #   environment:
-    #     SPARK_DIST_CLASSPATH: "{{ hdfs_classpath.stdout }}"
-    #   script: "master/run-spark-example.sh"
-    #   register: example
-    # - debug:
-    #     var: example.stdout_lines
+    - name: Run spark example
+      environment:
+        PATH: "{{ paths.spark }}:{{ paths.spark }}/bin:{{ ansible_env.PATH }}:{{ paths.java }}/bin:{{ paths.java }}/jre/bin"
+        SPARK_DIST_CLASSPATH: "{{ hdfs_classpath.stdout }}"
+      script: "master/run-spark-example.sh"
+      register: example
+    - debug:
+        var: example.stdout_lines
