@@ -243,6 +243,7 @@
           - "pandas"
           - "matplotlib"
           - "py4j"
+          - "pyspark"
 
 # setup jupyter service with pyspark + run spark examples on yarn
 - hosts: master
@@ -277,7 +278,7 @@
       environment:
         PATH: "{{ paths.spark }}:{{ paths.spark }}/bin:{{ ansible_env.PATH }}:{{ paths.java }}/bin:{{ paths.java }}/jre/bin"
         SPARK_DIST_CLASSPATH: "{{ hdfs_classpath.stdout }}"
-        PYTHONPATH: "{{ paths.spark }}/python"  # no pre-existing PYTHONPATH
+        PYTHONPATH: "{{ paths.spark }}/python:{{ paths.spark }}/python/build:{{ paths.spark }}/python/lib/pyspark.zip:{{ paths.spark }}/python/lib/py4j-0.10.7-src.zip"  # no pre-existing PYTHONPATH
         PYSPARK_DRIVER_PYTHON: "jupyter"
         PYSPARK_DRIVER_PYTHON_OPTS: "notebook --allow-root --port=8888 --no-browser --notebook-dir={{ paths.jupyter_notebooks }} --ip=0.0.0.0"
         PYSPARK_PYTHON: "python3"
@@ -293,7 +294,6 @@
     - name: Create jupyter service
       # https://programming.vip/docs/running-jupyter-jupyterhub-jupyterlab-as-a-system-service.html
       vars:
-        # TODO: Debug these options on the larger instance (get as much ram and cores as possible)
         jupyter_cmd: "{{ paths.spark }}/bin/pyspark"
       template:
         src: "master/jupyter.service.j2"
@@ -326,7 +326,7 @@
       environment:
         PATH: "{{ paths.spark }}:{{ paths.spark }}/bin:{{ ansible_env.PATH }}:{{ paths.java }}/bin:{{ paths.java }}/jre/bin"
         SPARK_DIST_CLASSPATH: "{{ hdfs_classpath.stdout }}"
-        PYTHONPATH: "{{ paths.spark }}/python"  # no pre-existing PYTHONPATH
+        PYTHONPATH: "{{ paths.spark }}/python:{{ paths.spark }}/python/build:{{ paths.spark }}/python/lib/pyspark.zip:{{ paths.spark }}/python/lib/py4j-0.10.7-src.zip"  # no pre-existing PYTHONPATH
         PYSPARK_PYTHON: "python3"
         # PYSPARK_SUBMIT_ARGS: "--master yarn --executor-cores 2 --num-executors 2 --driver-memory {{ node_config.spark_submit_driver_memory }} --executor-memory {{ node_config.spark_submit_executor_memory }}"
         DRIVER_MEMORY: "{{ node_config.spark_submit_driver_memory }}"
