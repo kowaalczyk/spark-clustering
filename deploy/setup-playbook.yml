@@ -282,7 +282,7 @@
         PYSPARK_DRIVER_PYTHON: "jupyter"
         PYSPARK_DRIVER_PYTHON_OPTS: "notebook --allow-root --port=8888 --no-browser --notebook-dir={{ paths.jupyter_notebooks }} --ip=0.0.0.0"
         PYSPARK_PYTHON: "python3"
-        PYSPARK_SUBMIT_ARGS: "--master yarn --executor-cores 2 --num-executors 2 --driver-memory {{ node_config.spark_submit_driver_memory }} --executor-memory {{ node_config.spark_submit_executor_memory }}"
+        PYSPARK_SUBMIT_ARGS: "--master yarn --executor-cores {{ node_config.spark_submit_executor_cores }} --num-executors {{ node_config.spark_submit_num_executors }} --driver-memory {{ node_config.spark_submit_driver_memory }} --executor-memory {{ node_config.spark_submit_executor_memory }}"
       shell: "printenv | grep 'PATH\\|SPARK\\|PYTHON\\|HADOOP\\|JAVA'"
       register: printenv
     - debug:
@@ -313,6 +313,7 @@
         var: jupyter_logs.stdout_lines
     # TODO: Deploy and run the application instead of examples
     - name: Run spark example - java
+      # TODO: Refactor
       environment:
         PATH: "{{ paths.spark }}:{{ paths.spark }}/bin:{{ ansible_env.PATH }}:{{ paths.java }}/bin:{{ paths.java }}/jre/bin"
         SPARK_DIST_CLASSPATH: "{{ hdfs_classpath.stdout }}"
@@ -323,6 +324,7 @@
     - debug:
         var: example.stdout_lines
     - name: Run spark example - python
+      # TODO: Refactor
       environment:
         PATH: "{{ paths.spark }}:{{ paths.spark }}/bin:{{ ansible_env.PATH }}:{{ paths.java }}/bin:{{ paths.java }}/jre/bin"
         SPARK_DIST_CLASSPATH: "{{ hdfs_classpath.stdout }}"

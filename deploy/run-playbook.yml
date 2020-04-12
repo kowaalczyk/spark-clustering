@@ -1,0 +1,67 @@
+- hosts: master
+  become: yes
+  vars_files:
+    - variables.yml
+  vars:
+    data_file: "uniprot-proteome_UP000005640.tab"
+    data_proxy: "http://students.mimuw.edu.pl/~kk385830"
+  environment:
+    JAVA_HOME: "{{ paths.java }}"
+    HADOOP_HOME: "{{ paths.hadoop }}"
+    HADOOP_PREFIX: "{{ paths.hadoop }}"
+    HADOOP_INSTALL: "{{ paths.hadoop }}"
+    HADOOP_MAPRED_HOME: "{{ paths.hadoop }}"
+    HADOOP_COMMON_HOME: "{{ paths.hadoop }}"
+    HADOOP_HDFS_HOME: "{{ paths.hadoop }}"
+    YARN_HOME: "{{ paths.hadoop }}"
+    HADOOP_COMMON_LIB_NATIVE_DIR: "{{ paths.hadoop }}/lib/native"
+    HADOOP_OPTS: "-Djava.library.path={{ paths.hadoop }}/lib/native"
+    LD_LIBRARY_PATH: "{{ paths.hadoop }}/lib/native"
+    PATH: "{{ ansible_env.PATH }}:~/.local/bin:{{ paths.hadoop }}/sbin:{{ paths.hadoop }}/bin"
+    YARN_CONF_DIR: "{{ paths.hadoop }}/etc/hadoop"
+    SPARK_HOME: "{{ paths.spark }}"
+  tasks:
+    - name: Ensure data is extracted on the master
+      shell:
+        chdir: "{{ prefix }}"
+        cmd: "wget {{ data_proxy}}/{{ data_file }}.gz; gunzip {{ data_file }}.gz"
+        creates: "{{ prefix }}/{{ data_file }}"
+      register: unarchive_result
+    - name: Add data to hdfs
+      when: unarchive_result is not skipped
+      block:
+        - name: Create hdfs dir
+          command:
+            cmd: "hdfs dfs -mkdir /data"
+          ignore_errors: yes
+        - name: Copy data to hdfs
+          command:
+            cmd: "hdfs dfs -put {{ prefix }}/{{ data_file }} /data/{{ data_file }}"
+    - name: Get hadoop classpath
+      command: "hdfs classpath"
+      register: hdfs_classpath
+    - name: Copy python script to the master
+      copy:
+        src: "../clustering_experiment.py"
+        dest: "/usr/src/clustering_experiment.py"
+    - name: Run application
+      environment:
+        PATH: "{{ paths.spark }}:{{ paths.spark }}/bin:{{ ansible_env.PATH }}:{{ paths.java }}/bin:{{ paths.java }}/jre/bin"
+        SPARK_DIST_CLASSPATH: "{{ hdfs_classpath.stdout }}"
+        PYTHONPATH: "{{ paths.spark }}/python:{{ paths.spark }}/python/build:{{ paths.spark }}/python/lib/pyspark.zip:{{ paths.spark }}/python/lib/py4j-0.10.7-src.zip"
+        PYSPARK_PYTHON: python3
+      command:
+        cmd: >
+          spark-submit --master yarn
+            --deploy-mode cluster
+            --driver-memory {{ node_config.spark_submit_driver_memory }}
+            --executor-memory {{ node_config.spark_submit_executor_memory }}
+            --executor-cores {{ node_config.spark_submit_executor_cores }}
+            --num-executors {{ node_config.spark_submit_num_executors }}
+            /usr/src/clustering_experiment.py
+            /data/{{ data_file }}
+      register: application_logs
+    - debug:
+        var: application_logs.stdout_lines
+    - debug:
+        var: application_logs.stderr_lines
