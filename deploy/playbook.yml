@@ -200,8 +200,8 @@
         - debug:
             var: dfsadmin_log.stdout_lines
 
-# install python, spark and pyspark + run jupyter notebook
-- hosts: master
+# install python, spark and pyspark
+- hosts: all
   become: yes
   vars_files:
     - variables.yml
@@ -243,6 +243,28 @@
           - "pandas"
           - "matplotlib"
           - "py4j"
+
+# setup jupyter service with pyspark + run spark examples on yarn
+- hosts: master
+  become: yes
+  vars_files:
+    - variables.yml
+  environment:
+    JAVA_HOME: "{{ paths.java }}"
+    HADOOP_HOME: "{{ paths.hadoop }}"
+    HADOOP_PREFIX: "{{ paths.hadoop }}"
+    HADOOP_INSTALL: "{{ paths.hadoop }}"
+    HADOOP_MAPRED_HOME: "{{ paths.hadoop }}"
+    HADOOP_COMMON_HOME: "{{ paths.hadoop }}"
+    HADOOP_HDFS_HOME: "{{ paths.hadoop }}"
+    YARN_HOME: "{{ paths.hadoop }}"
+    HADOOP_COMMON_LIB_NATIVE_DIR: "{{ paths.hadoop }}/lib/native"
+    HADOOP_OPTS: "-Djava.library.path={{ paths.hadoop }}/lib/native"
+    LD_LIBRARY_PATH: "{{ paths.hadoop }}/lib/native"
+    PATH: "{{ ansible_env.PATH }}:~/.local/bin:{{ paths.hadoop }}/sbin:{{ paths.hadoop }}/bin"
+    YARN_CONF_DIR: "{{ paths.hadoop }}/etc/hadoop"
+    SPARK_HOME: "{{ paths.spark }}"
+  tasks:
     - name: Create workdir for jupyter
       file:
         path: "{{ paths.jupyter_notebooks }}"
@@ -259,6 +281,7 @@
         PYSPARK_DRIVER_PYTHON: "jupyter"
         PYSPARK_DRIVER_PYTHON_OPTS: "notebook --allow-root --port=8888 --no-browser --notebook-dir={{ paths.jupyter_notebooks }} --ip=0.0.0.0"
         PYSPARK_PYTHON: "python3"
+        PYSPARK_SUBMIT_ARGS: "--master yarn --executor-cores 2 --num-executors 2 --driver-memory {{ node_config.spark_submit_driver_memory }} --executor-memory {{ node_config.spark_submit_executor_memory }}"
       shell: "printenv | grep 'PATH\\|SPARK\\|PYTHON\\|HADOOP\\|JAVA'"
       register: printenv
     - debug:
@@ -271,7 +294,7 @@
       # https://programming.vip/docs/running-jupyter-jupyterhub-jupyterlab-as-a-system-service.html
       vars:
         # TODO: Debug these options on the larger instance (get as much ram and cores as possible)
-        jupyter_cmd: "{{ paths.spark }}/bin/pyspark --master yarn --executor-cores 2 --num-executors 2 --executor-memory 3G"
+        jupyter_cmd: "{{ paths.spark }}/bin/pyspark"
       template:
         src: "master/jupyter.service.j2"
         dest: "/etc/systemd/system/jupyter.service"
@@ -288,12 +311,27 @@
       register: jupyter_logs
     - debug:
         var: jupyter_logs.stdout_lines
-    # TODO: Deploy and run the application instead:
-    - name: Run spark example
+    # TODO: Deploy and run the application instead of examples
+    - name: Run spark example - java
       environment:
         PATH: "{{ paths.spark }}:{{ paths.spark }}/bin:{{ ansible_env.PATH }}:{{ paths.java }}/bin:{{ paths.java }}/jre/bin"
         SPARK_DIST_CLASSPATH: "{{ hdfs_classpath.stdout }}"
-      script: "master/run-spark-example.sh"
+        DRIVER_MEMORY: "{{ node_config.spark_submit_driver_memory }}"
+        EXECUTOR_MEMORY: "{{ node_config.spark_submit_executor_memory }}"
+      script: "master/run-spark-example-java.sh"
+      register: example
+    - debug:
+        var: example.stdout_lines
+    - name: Run spark example - python
+      environment:
+        PATH: "{{ paths.spark }}:{{ paths.spark }}/bin:{{ ansible_env.PATH }}:{{ paths.java }}/bin:{{ paths.java }}/jre/bin"
+        SPARK_DIST_CLASSPATH: "{{ hdfs_classpath.stdout }}"
+        PYTHONPATH: "{{ paths.spark }}/python"  # no pre-existing PYTHONPATH
+        PYSPARK_PYTHON: "python3"
+        # PYSPARK_SUBMIT_ARGS: "--master yarn --executor-cores 2 --num-executors 2 --driver-memory {{ node_config.spark_submit_driver_memory }} --executor-memory {{ node_config.spark_submit_executor_memory }}"
+        DRIVER_MEMORY: "{{ node_config.spark_submit_driver_memory }}"
+        EXECUTOR_MEMORY: "{{ node_config.spark_submit_executor_memory }}"
+      script: "master/run-spark-example-python.sh"
       register: example
     - debug:
         var: example.stdout_lines

@@ -19,6 +19,8 @@ node_config:
   yarn_resource_memory: 7168
   yarn_scheduler_min_allocation_memory: 512
   yarn_scheduler_max_allocation_memory: 7168
+  spark_submit_driver_memory: "2g"
+  spark_submit_executor_memory: "1g"
 # node_config:
 #   # for 8GB RAM instances
 #   mapreduce_map_memory: 7168
@@ -28,3 +30,5 @@ node_config:
 #   yarn_resource_memory: 15360
 #   yarn_scheduler_min_allocation_memory: 1024
 #   yarn_scheduler_max_allocation_memory: 15360
+#   spark_submit_driver_memory: "4g"
+#   spark_submit_executor_memory: "2g"
