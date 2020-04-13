@@ -1,4 +1,2 @@
 {# Jinja template for creating ~/.bash_profile on the master #}
-{% for line in printenv.stdout_lines %}
-export {{ line }}
-{% endfor %}
+export PATH="{{ paths.spark }}:{{ paths.spark }}/bin:{{ ansible_env.PATH }}:~/.local/bin:{{ paths.hadoop }}/sbin:{{ paths.hadoop }}/bin:{{ paths.java }}/bin:{{ paths.java }}/jre/bin"

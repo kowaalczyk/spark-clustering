@@ -58,10 +58,10 @@
         PYTHONPATH: "{{ paths.spark }}/python:{{ paths.spark }}/python/build:{{ paths.spark }}/python/lib/pyspark.zip:{{ paths.spark }}/python/lib/py4j-0.10.7-src.zip"
         PYSPARK_PYTHON: python3
       command:
-        cmd: >
-          spark-submit --master yarn
+        cmd: spark-submit --master yarn
             --deploy-mode cluster
             --driver-memory {{ node_config.spark_submit_driver_memory }}
+            --driver-cores {{ node_config.spark_submit_driver_cores }}
             --executor-memory {{ node_config.spark_submit_executor_memory }}
             --executor-cores {{ node_config.spark_submit_executor_cores }}
             --num-executors {{ node_config.spark_submit_num_executors }}

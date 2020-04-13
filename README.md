@@ -76,6 +76,11 @@ What's interesting, is the fact that after writing the dense vectors to disk,
 parquet files are of similar size to the sparse ones, which means parquet does
 a lot of processing and compression to store files efficiently.
 
+Also, since `MinMaxScaler` always returns dense vectors, I decided not to include
+it in the preprocessing pipeline, since min-max scaling is only necessary for the
+`GaussianMixture` model running on output from non-binary `CountVectorizer`. Without
+that change, the preprocessing pipeline would run 30-90 minutes longer.
+
 Filtered Python logs from the final run of preprocessing are located in 
 [`logs/preprocess-sparse-python.log`](logs/preprocess-sparse-python.log).
 

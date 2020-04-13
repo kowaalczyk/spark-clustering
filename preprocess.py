@@ -9,7 +9,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import udf
 from pyspark.sql.types import ArrayType, StringType
 
-from pyspark.ml.feature import NGram, CountVectorizer
+from pyspark.ml.feature import NGram, CountVectorizer, MinMaxScaler
 from pyspark.ml.linalg import Vectors, VectorUDT
 
 
@@ -94,6 +94,8 @@ def preprocess_df(
     Loads TSV from in_file, performs preprocessing and saves to out_file.
     WARNING: dense vectors can extend computation time by more than 70x
     """
+    spark = SparkSession.builder.getOrCreate()
+
     logger = YarnLogger()
     logger.info("preprocessing started")
     logger.info(f"in_file = '{in_file}'")
@@ -131,7 +133,7 @@ def preprocess_df(
             toDenseVector(vectorizer.getOutputCol()).alias(feature_column_name),
         )
     else:
-        # vectorizer output is dense by default
+        # vectorizer output is sparse by default
         df_features = df_vectorized.select(
             df_vectorized["entry"],
             df_vectorized["entry_name"],

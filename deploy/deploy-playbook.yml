@@ -166,7 +166,7 @@
     PATH: "{{ ansible_env.PATH }}:{{ paths.hadoop }}/sbin:{{ paths.hadoop }}/bin"
   tasks:
     - name: Debug printenv
-      command: printenv
+      shell: "printenv | grep 'PATH\\|SPARK\\|PYTHON\\|HADOOP\\|JAVA'"
       register: printenv
     - debug:
         var: printenv
@@ -272,20 +272,24 @@
       template:
         src: master/bash_profile.j2
         dest: "/root/.bash_profile"
+    - name: Get hadoop classpath
+      command: "hdfs classpath"
+      register: hdfs_classpath
     - name: Test on spark example - java
       environment:
         PATH: "{{ paths.spark }}:{{ paths.spark }}/bin:{{ ansible_env.PATH }}:{{ paths.java }}/bin:{{ paths.java }}/jre/bin"
         SPARK_DIST_CLASSPATH: "{{ hdfs_classpath.stdout }}"
-      command:
-        cmd: >
-          spark-submit --master yarn \
-            --deploy-mode cluster \
-            --driver-memory {{ node_config.spark_submit_driver_memory }} \
-            --executor-memory {{ node_config.spark_submit_executor_memory }} \
-            --executor-cores 1 \
-            --class org.apache.spark.examples.SparkPi \
-            $SPARK_HOME/examples/jars/spark-examples*.jar \
+      shell:
+        cmd: spark-submit --master yarn
+            --deploy-mode cluster
+            --driver-memory {{ node_config.spark_submit_driver_memory }}
+            --executor-memory {{ node_config.spark_submit_executor_memory }}
+            --executor-cores 1
+            --class org.apache.spark.examples.SparkPi
+            {{ paths.spark }}/examples/jars/spark-examples*.jar
             10
+      args:
+        executable: /bin/bash
       register: example
     - debug:
         var: example.stdout_lines
@@ -296,13 +300,12 @@
         PYTHONPATH: "{{ paths.spark }}/python:{{ paths.spark }}/python/build:{{ paths.spark }}/python/lib/pyspark.zip:{{ paths.spark }}/python/lib/py4j-0.10.7-src.zip"  # no pre-existing PYTHONPATH
         PYSPARK_PYTHON: "python3"
       command:
-        cmd: >
-          spark-submit --master yarn \
-            --deploy-mode cluster \
-            --driver-memory {{ node_config.spark_submit_driver_memory }} \
-            --executor-memory {{ node_config.spark_submit_executor_memory }} \
-            --executor-cores 1 \
-            {{ paths.spark }}/examples/src/main/python/pi.py \
+        cmd: spark-submit --master yarn
+            --deploy-mode cluster
+            --driver-memory {{ node_config.spark_submit_driver_memory }}
+            --executor-memory {{ node_config.spark_submit_executor_memory }}
+            --executor-cores 1
+            {{ paths.spark }}/examples/src/main/python/pi.py
             10
       register: example
     - debug:
