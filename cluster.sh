@@ -9,10 +9,11 @@ DO_IMAGE_DISTRIBUTION_ID="53893572"
 # DO_DROPLET_SIZE_SLUG="s-1vcpu-1gb" # smallest, $0.007440 / hr
 # DO_DROPLET_SIZE_SLUG="c-2"  # 4GB RAM, 2VCPUs, 25GB Disk, $0.060000 / hr
 DO_DROPLET_SIZE_SLUG="c-4"  # 8GB RAM, 4VCPUs, 50GB Disk, $0.119000 / hr
+DO_MASTER_DROPLET_SIZE_SLUG="c-2"  # master instance does not use as much resources as slaves
 DO_DROPLET_TAG="big-data"
 DO_EXTRA_CREATE_OPTS="--enable-monitoring"
 
-N_SLAVES=2
+N_SLAVES=4
 
 function status() {
     doctl compute droplet ls --tag-name "$DO_DROPLET_TAG" \
@@ -33,7 +34,7 @@ function up() {
         --region "$DO_REGION" \
         --ssh-keys "$DO_SSH_KEY_ID" \
         --image "$DO_IMAGE_DISTRIBUTION_ID" \
-        --size "$DO_DROPLET_SIZE_SLUG" \
+        --size "$DO_MASTER_DROPLET_SIZE_SLUG" \
         --tag-name "$DO_DROPLET_TAG" \
         --format "ID,Name,Image,Memory,VCPUs,Disk" \
         $DO_EXTRA_CREATE_OPTS

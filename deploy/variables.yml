@@ -11,8 +11,7 @@ paths:
   jupyter_notebooks: "{{ prefix }}/notebooks"
 # https://docs.cloudera.com/HDPDocuments/HDP2/HDP-2.6.4/bk_command-line-installation/content/determine-hdp-memory-config.html
 # https://www.alibabacloud.com/help/doc-detail/28124.htm
-# node_config:
-#   # for 2x 4GB RAM instances
+# node_config:  # 2x C-2 droplet
 #   mapreduce_map_memory: 3072
 #   mapreduce_map_java_heapsize: 2560  # ~80% of mapreduce_map_memory
 #   mapreduce_reduce_memory: 6144
@@ -24,16 +23,27 @@ paths:
 #   spark_submit_executor_memory: "1g"
 #   spark_submit_executor_cores: "2"
 #   spark_submit_num_executors: "2"
-node_config:
-  # for 8GB RAM instances
+# node_config:  # 2x C-4 droplet
+#   mapreduce_map_memory: 7168
+#   mapreduce_map_java_heapsize: 6144  # ~80% of mapreduce_map_memory
+#   mapreduce_reduce_memory: 14336
+#   mapreduce_reduce_java_heap_size: 12288  # ~80% of mapreduce_reduce_memory
+#   yarn_resource_memory: 15360
+#   yarn_scheduler_min_allocation_memory: 1024
+#   yarn_scheduler_max_allocation_memory: 15360
+#   spark_submit_driver_memory: "2g"
+#   spark_submit_executor_memory: "3g"
+#   spark_submit_executor_cores: "2"
+#   spark_submit_num_executors: "3"
+node_config:  # 4x C-4 droplet
   mapreduce_map_memory: 7168
   mapreduce_map_java_heapsize: 6144  # ~80% of mapreduce_map_memory
   mapreduce_reduce_memory: 14336
   mapreduce_reduce_java_heap_size: 12288  # ~80% of mapreduce_reduce_memory
-  yarn_resource_memory: 15360
+  yarn_resource_memory: 31744
   yarn_scheduler_min_allocation_memory: 1024
-  yarn_scheduler_max_allocation_memory: 15360
-  spark_submit_driver_memory: "2g"
-  spark_submit_executor_memory: "3g"
+  yarn_scheduler_max_allocation_memory: 30720
+  spark_submit_driver_memory: "3g"
+  spark_submit_executor_memory: "4g"
   spark_submit_executor_cores: "2"
-  spark_submit_num_executors: "3"
+  spark_submit_num_executors: "7"

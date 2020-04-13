@@ -1,3 +1,6 @@
+# Runs python scripts on the remote spark cluster.
+# Requires:
+# - deploy-playbook.yml to have finished successfully (cluster is running)
 # Extra variables (parameters to be specified from command line):
 # - py_file: absolute path to file that will be uploaded and executed
 - hosts: master

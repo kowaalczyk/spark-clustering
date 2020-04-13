@@ -1,5 +1,6 @@
-# TODO: Separate jupyter notebook deployment from application deployment
-# install hadoop
+# Sets up hadoop, spark running on yarn, and python configured for pyspark.
+
+# 1. install hadoop
 - hosts: all
   become: yes
   vars_files:
@@ -74,7 +75,7 @@
         path: "~/.ssh/id_rsa"
       register: ssh_key
 
-# configure access between nodes
+# 2. configure access between nodes
 - hosts: all
   become: yes
   vars:
@@ -145,7 +146,7 @@
         state: reloaded
       with_items: "{{ slave_hosts + [master_host] }}"
 
-# start hdfs
+# 3. start hdfs
 - hosts: master
   become: yes
   vars_files:
@@ -201,7 +202,7 @@
         - debug:
             var: dfsadmin_log.stdout_lines
 
-# install python, spark and pyspark
+# 4. install python, spark and pyspark
 - hosts: all
   become: yes
   vars_files:
@@ -246,7 +247,7 @@
           - "py4j"
           - "pyspark"
 
-# setup jupyter service with pyspark + run spark examples on yarn
+# 5. setup .bash_profile for easy access via ssh and run spark examples on yarn
 - hosts: master
   become: yes
   vars_files:
@@ -267,78 +268,42 @@
     YARN_CONF_DIR: "{{ paths.hadoop }}/etc/hadoop"
     SPARK_HOME: "{{ paths.spark }}"
   tasks:
-    - name: Create workdir for jupyter
-      file:
-        path: "{{ paths.jupyter_notebooks }}"
-        state: directory
-        mode: "0755"
-    - name: Get hadoop classpath
-      command: "hdfs classpath"
-      register: hdfs_classpath
-    - name: Get environment for jupyter service
-      environment:
-        PATH: "{{ paths.spark }}:{{ paths.spark }}/bin:{{ ansible_env.PATH }}:{{ paths.java }}/bin:{{ paths.java }}/jre/bin"
-        SPARK_DIST_CLASSPATH: "{{ hdfs_classpath.stdout }}"
-        PYTHONPATH: "{{ paths.spark }}/python:{{ paths.spark }}/python/build:{{ paths.spark }}/python/lib/pyspark.zip:{{ paths.spark }}/python/lib/py4j-0.10.7-src.zip"  # no pre-existing PYTHONPATH
-        PYSPARK_DRIVER_PYTHON: "jupyter"
-        PYSPARK_DRIVER_PYTHON_OPTS: "notebook --allow-root --port=8888 --no-browser --notebook-dir={{ paths.jupyter_notebooks }} --ip=0.0.0.0"
-        PYSPARK_PYTHON: "python3"
-        PYSPARK_SUBMIT_ARGS: "--master yarn --executor-cores {{ node_config.spark_submit_executor_cores }} --num-executors {{ node_config.spark_submit_num_executors }} --driver-memory {{ node_config.spark_submit_driver_memory }} --executor-memory {{ node_config.spark_submit_executor_memory }}"
-      shell: "printenv | grep 'PATH\\|SPARK\\|PYTHON\\|HADOOP\\|JAVA'"
-      register: printenv
-    - debug:
-        var: printenv.stdout_lines
-    - name: Create env file for jupyter service
-      copy:
-        content: '{{ printenv.stdout }}'
-        dest: "/etc/systemd/system/jupyter.env"
-    - name: Create .bash_profile to easy call hdfs, yarn and spark commands
+    - name: Create .bash_profile to easy call hdfs, yarn and spark commands via ssh
       template:
         src: master/bash_profile.j2
         dest: "/root/.bash_profile"
-    - name: Create jupyter service
-      # https://programming.vip/docs/running-jupyter-jupyterhub-jupyterlab-as-a-system-service.html
-      vars:
-        jupyter_cmd: "{{ paths.spark }}/bin/pyspark"
-      template:
-        src: "master/jupyter.service.j2"
-        dest: "/etc/systemd/system/jupyter.service"
-    - name: Start jupyter service
-      systemd:
-        name: jupyter
-        state: restarted
-        daemon_reload: yes
-        enabled: yes  # start on boot
-    - pause:
-        seconds: 10
-    - name: Get jupyter logs with password/token
-      command: "systemctl status jupyter --no-pager"
-      register: jupyter_logs
-    - debug:
-        var: jupyter_logs.stdout_lines
-    # TODO: Deploy and run the application instead of examples
-    - name: Run spark example - java
-      # TODO: Refactor
+    - name: Test on spark example - java
       environment:
         PATH: "{{ paths.spark }}:{{ paths.spark }}/bin:{{ ansible_env.PATH }}:{{ paths.java }}/bin:{{ paths.java }}/jre/bin"
         SPARK_DIST_CLASSPATH: "{{ hdfs_classpath.stdout }}"
-        DRIVER_MEMORY: "{{ node_config.spark_submit_driver_memory }}"
-        EXECUTOR_MEMORY: "{{ node_config.spark_submit_executor_memory }}"
-      script: "master/run-spark-example-java.sh"
+      command:
+        cmd: >
+          spark-submit --master yarn \
+            --deploy-mode cluster \
+            --driver-memory {{ node_config.spark_submit_driver_memory }} \
+            --executor-memory {{ node_config.spark_submit_executor_memory }} \
+            --executor-cores 1 \
+            --class org.apache.spark.examples.SparkPi \
+            $SPARK_HOME/examples/jars/spark-examples*.jar \
+            10
       register: example
     - debug:
         var: example.stdout_lines
-    - name: Run spark example - python
-      # TODO: Refactor
+    - name: Test on spark example - python
       environment:
         PATH: "{{ paths.spark }}:{{ paths.spark }}/bin:{{ ansible_env.PATH }}:{{ paths.java }}/bin:{{ paths.java }}/jre/bin"
         SPARK_DIST_CLASSPATH: "{{ hdfs_classpath.stdout }}"
         PYTHONPATH: "{{ paths.spark }}/python:{{ paths.spark }}/python/build:{{ paths.spark }}/python/lib/pyspark.zip:{{ paths.spark }}/python/lib/py4j-0.10.7-src.zip"  # no pre-existing PYTHONPATH
         PYSPARK_PYTHON: "python3"
-        # PYSPARK_SUBMIT_ARGS: "--master yarn --executor-cores 2 --num-executors 2 --driver-memory {{ node_config.spark_submit_driver_memory }} --executor-memory {{ node_config.spark_submit_executor_memory }}"
-        DRIVER_MEMORY: "{{ node_config.spark_submit_driver_memory }}"
-        EXECUTOR_MEMORY: "{{ node_config.spark_submit_executor_memory }}"
-      script: "master/run-spark-example-python.sh"
+      command:
+        cmd: >
+          spark-submit --master yarn \
+            --deploy-mode cluster \
+            --driver-memory {{ node_config.spark_submit_driver_memory }} \
+            --executor-memory {{ node_config.spark_submit_executor_memory }} \
+            --executor-cores 1 \
+            {{ paths.spark }}/examples/src/main/python/pi.py \
+            10
       register: example
     - debug:
         var: example.stdout_lines

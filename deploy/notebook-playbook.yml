@@ -1,0 +1,69 @@
+# Sets up jupyter service with PySpark.
+# Requires:
+# - deploy-playbook.yml to have finished successfully (cluster is running)
+- hosts: master
+  become: yes
+  vars_files:
+    - variables.yml
+  environment:
+    JAVA_HOME: "{{ paths.java }}"
+    HADOOP_HOME: "{{ paths.hadoop }}"
+    HADOOP_PREFIX: "{{ paths.hadoop }}"
+    HADOOP_INSTALL: "{{ paths.hadoop }}"
+    HADOOP_MAPRED_HOME: "{{ paths.hadoop }}"
+    HADOOP_COMMON_HOME: "{{ paths.hadoop }}"
+    HADOOP_HDFS_HOME: "{{ paths.hadoop }}"
+    YARN_HOME: "{{ paths.hadoop }}"
+    HADOOP_COMMON_LIB_NATIVE_DIR: "{{ paths.hadoop }}/lib/native"
+    HADOOP_OPTS: "-Djava.library.path={{ paths.hadoop }}/lib/native"
+    LD_LIBRARY_PATH: "{{ paths.hadoop }}/lib/native"
+    PATH: "{{ ansible_env.PATH }}:~/.local/bin:{{ paths.hadoop }}/sbin:{{ paths.hadoop }}/bin"
+    YARN_CONF_DIR: "{{ paths.hadoop }}/etc/hadoop"
+    SPARK_HOME: "{{ paths.spark }}"
+  tasks:
+    - name: Create workdir for jupyter
+      file:
+        path: "{{ paths.jupyter_notebooks }}"
+        state: directory
+        mode: "0755"
+    - name: Get hadoop classpath
+      command: "hdfs classpath"
+      register: hdfs_classpath
+    - name: Get environment for jupyter service
+      environment:
+        PATH: "{{ paths.spark }}:{{ paths.spark }}/bin:{{ ansible_env.PATH }}:{{ paths.java }}/bin:{{ paths.java }}/jre/bin"
+        SPARK_DIST_CLASSPATH: "{{ hdfs_classpath.stdout }}"
+        PYTHONPATH: "{{ paths.spark }}/python:{{ paths.spark }}/python/build:{{ paths.spark }}/python/lib/pyspark.zip:{{ paths.spark }}/python/lib/py4j-0.10.7-src.zip"  # no pre-existing PYTHONPATH
+        PYSPARK_DRIVER_PYTHON: "jupyter"
+        PYSPARK_DRIVER_PYTHON_OPTS: "notebook --allow-root --port=8888 --no-browser --notebook-dir={{ paths.jupyter_notebooks }} --ip=0.0.0.0"
+        PYSPARK_PYTHON: "python3"
+        PYSPARK_SUBMIT_ARGS: "--master yarn --executor-cores {{ node_config.spark_submit_executor_cores }} --num-executors {{ node_config.spark_submit_num_executors }} --driver-memory {{ node_config.spark_submit_driver_memory }} --executor-memory {{ node_config.spark_submit_executor_memory }}"
+      shell: "printenv | grep 'PATH\\|SPARK\\|PYTHON\\|HADOOP\\|JAVA'"
+      register: printenv
+    - debug:
+        var: printenv.stdout_lines
+    - name: Create env file for jupyter service
+      copy:
+        content: '{{ printenv.stdout }}'
+        dest: "/etc/systemd/system/jupyter.env"
+    - name: Create jupyter service
+      # https://programming.vip/docs/running-jupyter-jupyterhub-jupyterlab-as-a-system-service.html
+      vars:
+        jupyter_cmd: "{{ paths.spark }}/bin/pyspark"
+      template:
+        src: "master/jupyter.service.j2"
+        dest: "/etc/systemd/system/jupyter.service"
+    - name: Start jupyter service
+      systemd:
+        name: jupyter
+        state: restarted
+        daemon_reload: yes
+        enabled: yes  # start on boot
+    - pause:
+        seconds: 10
+    - name: Get jupyter logs with password/token
+      command: "systemctl status jupyter --no-pager"
+      register: jupyter_logs
+    - debug:
+        var: jupyter_logs.stdout_lines
+    # TODO: Copy example notebook for reference

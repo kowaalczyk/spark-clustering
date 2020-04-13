@@ -1,9 +1,9 @@
 all: deploy preprocess
 
-deploy:
+deploy notebook:
 	ANSIBLE_NOCOWS=1 ansible-playbook \
 		-i deploy/hosts \
-		deploy/deploy-playbook.yml
+		deploy/$@-playbook.yml
 
 preprocess:
 	ANSIBLE_NOCOWS=1 ansible-playbook \
@@ -11,4 +11,4 @@ preprocess:
 		--extra-vars "py_file=$@.py" \
 		deploy/run-playbook.yml
 
-.PHONY: deploy preprocess
+.PHONY: deploy notebook preprocess
