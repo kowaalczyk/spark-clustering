@@ -4,4 +4,9 @@
     <value>hdfs://{{ master_host }}:9000</value>
     <description>NameNode URI</description>
   </property>
+  {# To allow adding/removing files via hadoop GUI (port 50070): #}
+  {# <property>
+    <name>hadoop.http.staticuser.user</name>
+    <value>root</value>
+  </property> #}
 </configuration>

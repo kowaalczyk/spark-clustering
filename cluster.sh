@@ -6,14 +6,12 @@ DO_PROJECT_ID="abb6ec4f-4c12-47ec-9ad6-53a9bb9722aa"
 DO_REGION="ams3"
 DO_SSH_KEY_ID="25709162"
 DO_IMAGE_DISTRIBUTION_ID="53893572"
-# DO_DROPLET_SIZE_SLUG="s-1vcpu-1gb" # smallest, $0.007440 / hr
-# DO_DROPLET_SIZE_SLUG="c-2"  # 4GB RAM, 2VCPUs, 25GB Disk, $0.060000 / hr
-DO_DROPLET_SIZE_SLUG="c-4"  # 8GB RAM, 4VCPUs, 50GB Disk, $0.119000 / hr
-DO_MASTER_DROPLET_SIZE_SLUG="c-2"  # master instance does not use as much resources as slaves
+DO_DROPLET_SIZE_SLUG="c-8"  # see readme for droplet size comparison
+DO_MASTER_DROPLET_SIZE_SLUG="c-4"  # master instance does not use as much resources as slaves
 DO_DROPLET_TAG="big-data"
 DO_EXTRA_CREATE_OPTS="--enable-monitoring"
 
-N_SLAVES=4
+N_SLAVES=2
 
 function status() {
     doctl compute droplet ls --tag-name "$DO_DROPLET_TAG" \
@@ -85,8 +83,37 @@ function down() {
     doctl compute droplet rm $droplets -f
 }
 
+function rebuild() {
+    # rebuild all project droplets
+    droplets=$(doctl compute droplet ls --format ID --no-header --tag-name "$DO_DROPLET_TAG")
+    for droplet in $droplets; do
+        doctl compute droplet-action rebuild "$droplet" --image "$DO_IMAGE_DISTRIBUTION_ID"
+    done
+
+    # wait for IPs
+    echo ""
+    echo "Waiting for IP assignment..."
+    n_droplets=$(echo "$droplets" | wc -w | tr -d ' ')
+    n_ready_droplets=$(doctl compute droplet ls \
+        --tag-name "$DO_DROPLET_TAG" \
+        --format "PublicIPv4" \
+        --no-header | wc -w | tr -d '\blank')
+    while [[ "$n_ready_droplets" -lt "$n_droplets" ]]; do
+        echo "$n_ready_droplets out of $n_droplets..."
+        sleep 3
+        n_ready_droplets=$(doctl compute droplet ls \
+            --tag-name "$DO_DROPLET_TAG" \
+            --format "PublicIPv4" \
+            --no-header | wc -w | tr -d '\blank')
+    done
+
+    # display status with IPs
+    echo ""
+    status
+}
+
 if [[ "$#" -ne 1 ]]; then
-    echo "Usage: $0 [up|down|status]"
+    echo "Usage: $0 [up|down|status|rebuild]"
     exit 2
 fi
 
@@ -100,8 +127,11 @@ status)
 down)
     down
     ;;
+rebuild)
+    rebuild
+    ;;
 *)
-    echo "Usage: $0 [up|down|status]"
+    echo "Usage: $0 [up|down|status|rebuild]"
     exit 2
     ;;
 esac
