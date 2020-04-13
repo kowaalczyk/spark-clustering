@@ -1,3 +1,4 @@
+# TODO: Separate jupyter notebook deployment from application deployment
 # install hadoop
 - hosts: all
   become: yes
@@ -291,6 +292,10 @@
       copy:
         content: '{{ printenv.stdout }}'
         dest: "/etc/systemd/system/jupyter.env"
+    - name: Create .bash_profile to easy call hdfs, yarn and spark commands
+      template:
+        src: master/bash_profile.j2
+        dest: "/root/.bash_profile"
     - name: Create jupyter service
       # https://programming.vip/docs/running-jupyter-jupyterhub-jupyterlab-as-a-system-service.html
       vars:

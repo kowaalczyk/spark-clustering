@@ -1,0 +1,66 @@
+[PYTHON] 2020-04-13 15:24:44,270.270 INFO preprocess - wrapper: preprocess_df keyword arguments:
+[PYTHON] 2020-04-13 15:24:44,274.274 INFO preprocess - wrapper: n_shingles: 3
+[PYTHON] 2020-04-13 15:24:44,274.274 INFO preprocess - wrapper: use_binary_vectors: True
+[PYTHON] 2020-04-13 15:24:44,274.274 INFO preprocess - wrapper: use_dense_vectors: False
+[PYTHON] 2020-04-13 15:24:44,274.274 INFO preprocess - preprocess_df: preprocessing started
+[PYTHON] 2020-04-13 15:24:44,274.274 INFO preprocess - preprocess_df: in_file = '/data/uniprot-proteome_UP000005640.tab'
+[PYTHON] 2020-04-13 15:24:44,274.274 INFO preprocess - preprocess_df: n_shingles = ''
+[PYTHON] 2020-04-13 15:25:33,941.941 INFO preprocess - preprocess_df: out_file=/data/df_3-shingles_sparse-binary-vectors.parquet
+[PYTHON] 2020-04-13 15:25:33,942.942 INFO preprocess - wrapper: preprocess_df finished in 49.67s
+[PYTHON] 2020-04-13 15:25:33,942.942 INFO preprocess - <module>: completed 1 in 49.67s (49.67s/it)
+[PYTHON] 2020-04-13 15:25:33,942.942 INFO preprocess - <module>: estimated remaining time: 248.36s
+[PYTHON] 2020-04-13 15:25:33,942.942 INFO preprocess - wrapper: preprocess_df keyword arguments:
+[PYTHON] 2020-04-13 15:25:33,942.942 INFO preprocess - wrapper: n_shingles: 3
+[PYTHON] 2020-04-13 15:25:33,942.942 INFO preprocess - wrapper: use_binary_vectors: False
+[PYTHON] 2020-04-13 15:25:33,942.942 INFO preprocess - wrapper: use_dense_vectors: False
+[PYTHON] 2020-04-13 15:25:33,942.942 INFO preprocess - preprocess_df: preprocessing started
+[PYTHON] 2020-04-13 15:25:33,942.942 INFO preprocess - preprocess_df: in_file = '/data/uniprot-proteome_UP000005640.tab'
+[PYTHON] 2020-04-13 15:25:33,942.942 INFO preprocess - preprocess_df: n_shingles = ''
+[PYTHON] 2020-04-13 15:26:07,246.246 INFO preprocess - preprocess_df: out_file=/data/df_3-shingles_sparse-count-vectors.parquet
+[PYTHON] 2020-04-13 15:26:07,246.246 INFO preprocess - wrapper: preprocess_df finished in 33.30s
+[PYTHON] 2020-04-13 15:26:07,246.246 INFO preprocess - <module>: completed 2 in 82.98s (41.49s/it)
+[PYTHON] 2020-04-13 15:26:07,247.247 INFO preprocess - <module>: estimated remaining time: 165.95s
+[PYTHON] 2020-04-13 15:26:07,247.247 INFO preprocess - wrapper: preprocess_df keyword arguments:
+[PYTHON] 2020-04-13 15:26:07,247.247 INFO preprocess - wrapper: n_shingles: 4
+[PYTHON] 2020-04-13 15:26:07,247.247 INFO preprocess - wrapper: use_binary_vectors: True
+[PYTHON] 2020-04-13 15:26:07,247.247 INFO preprocess - wrapper: use_dense_vectors: False
+[PYTHON] 2020-04-13 15:26:07,247.247 INFO preprocess - preprocess_df: preprocessing started
+[PYTHON] 2020-04-13 15:26:07,247.247 INFO preprocess - preprocess_df: in_file = '/data/uniprot-proteome_UP000005640.tab'
+[PYTHON] 2020-04-13 15:26:07,247.247 INFO preprocess - preprocess_df: n_shingles = ''
+[PYTHON] 2020-04-13 15:26:46,107.107 INFO preprocess - preprocess_df: out_file=/data/df_4-shingles_sparse-binary-vectors.parquet
+[PYTHON] 2020-04-13 15:26:46,107.107 INFO preprocess - wrapper: preprocess_df finished in 38.86s
+[PYTHON] 2020-04-13 15:26:46,107.107 INFO preprocess - <module>: completed 3 in 121.84s (40.61s/it)
+[PYTHON] 2020-04-13 15:26:46,107.107 INFO preprocess - <module>: estimated remaining time: 121.84s
+[PYTHON] 2020-04-13 15:26:46,107.107 INFO preprocess - wrapper: preprocess_df keyword arguments:
+[PYTHON] 2020-04-13 15:26:46,107.107 INFO preprocess - wrapper: n_shingles: 4
+[PYTHON] 2020-04-13 15:26:46,107.107 INFO preprocess - wrapper: use_binary_vectors: False
+[PYTHON] 2020-04-13 15:26:46,107.107 INFO preprocess - wrapper: use_dense_vectors: False
+[PYTHON] 2020-04-13 15:26:46,108.108 INFO preprocess - preprocess_df: preprocessing started
+[PYTHON] 2020-04-13 15:26:46,108.108 INFO preprocess - preprocess_df: in_file = '/data/uniprot-proteome_UP000005640.tab'
+[PYTHON] 2020-04-13 15:26:46,108.108 INFO preprocess - preprocess_df: n_shingles = ''
+[PYTHON] 2020-04-13 15:27:26,208.208 INFO preprocess - preprocess_df: out_file=/data/df_4-shingles_sparse-count-vectors.parquet
+[PYTHON] 2020-04-13 15:27:26,208.208 INFO preprocess - wrapper: preprocess_df finished in 40.10s
+[PYTHON] 2020-04-13 15:27:26,208.208 INFO preprocess - <module>: completed 4 in 161.94s (40.48s/it)
+[PYTHON] 2020-04-13 15:27:26,208.208 INFO preprocess - <module>: estimated remaining time: 80.97s
+[PYTHON] 2020-04-13 15:27:26,208.208 INFO preprocess - wrapper: preprocess_df keyword arguments:
+[PYTHON] 2020-04-13 15:27:26,209.209 INFO preprocess - wrapper: n_shingles: 5
+[PYTHON] 2020-04-13 15:27:26,209.209 INFO preprocess - wrapper: use_binary_vectors: True
+[PYTHON] 2020-04-13 15:27:26,209.209 INFO preprocess - wrapper: use_dense_vectors: False
+[PYTHON] 2020-04-13 15:27:26,209.209 INFO preprocess - preprocess_df: preprocessing started
+[PYTHON] 2020-04-13 15:27:26,209.209 INFO preprocess - preprocess_df: in_file = '/data/uniprot-proteome_UP000005640.tab'
+[PYTHON] 2020-04-13 15:27:26,209.209 INFO preprocess - preprocess_df: n_shingles = ''
+[PYTHON] 2020-04-13 15:28:23,107.107 INFO preprocess - preprocess_df: out_file=/data/df_5-shingles_sparse-binary-vectors.parquet
+[PYTHON] 2020-04-13 15:28:23,108.108 INFO preprocess - wrapper: preprocess_df finished in 56.90s
+[PYTHON] 2020-04-13 15:28:23,108.108 INFO preprocess - <module>: completed 5 in 218.84s (43.77s/it)
+[PYTHON] 2020-04-13 15:28:23,108.108 INFO preprocess - <module>: estimated remaining time: 43.77s
+[PYTHON] 2020-04-13 15:28:23,108.108 INFO preprocess - wrapper: preprocess_df keyword arguments:
+[PYTHON] 2020-04-13 15:28:23,108.108 INFO preprocess - wrapper: n_shingles: 5
+[PYTHON] 2020-04-13 15:28:23,108.108 INFO preprocess - wrapper: use_binary_vectors: False
+[PYTHON] 2020-04-13 15:28:23,108.108 INFO preprocess - wrapper: use_dense_vectors: False
+[PYTHON] 2020-04-13 15:28:23,108.108 INFO preprocess - preprocess_df: preprocessing started
+[PYTHON] 2020-04-13 15:28:23,109.109 INFO preprocess - preprocess_df: in_file = '/data/uniprot-proteome_UP000005640.tab'
+[PYTHON] 2020-04-13 15:28:23,109.109 INFO preprocess - preprocess_df: n_shingles = ''
+[PYTHON] 2020-04-13 15:29:15,285.285 INFO preprocess - preprocess_df: out_file=/data/df_5-shingles_sparse-count-vectors.parquet
+[PYTHON] 2020-04-13 15:29:15,286.286 INFO preprocess - wrapper: preprocess_df finished in 52.18s
+[PYTHON] 2020-04-13 15:29:15,286.286 INFO preprocess - <module>: completed 6 in 271.02s (45.17s/it)
+[PYTHON] 2020-04-13 15:29:15,286.286 INFO preprocess - <module>: preprocessing finished in 271.02s (4.52 minutes)

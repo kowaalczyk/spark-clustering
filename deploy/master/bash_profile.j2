@@ -1,0 +1,4 @@
+{# Jinja template for creating ~/.bash_profile on the master #}
+{% for line in printenv.stdout_lines %}
+export {{ line }}
+{% endfor %}

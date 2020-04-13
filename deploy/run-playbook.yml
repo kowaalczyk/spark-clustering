@@ -1,3 +1,5 @@
+# Extra variables (parameters to be specified from command line):
+# - py_file: absolute path to file that will be uploaded and executed
 - hosts: master
   become: yes
   vars_files:
@@ -28,6 +30,7 @@
         creates: "{{ prefix }}/{{ data_file }}"
       register: unarchive_result
     - name: Add data to hdfs
+      # TODO: Make this work correctly:
       when: unarchive_result is not skipped
       block:
         - name: Create hdfs dir
@@ -37,13 +40,14 @@
         - name: Copy data to hdfs
           command:
             cmd: "hdfs dfs -put {{ prefix }}/{{ data_file }} /data/{{ data_file }}"
+          ignore_errors: yes
     - name: Get hadoop classpath
       command: "hdfs classpath"
       register: hdfs_classpath
-    - name: Copy python script to the master
+    - name: Copy python scripts to the master
       copy:
-        src: "../clustering_experiment.py"
-        dest: "/usr/src/clustering_experiment.py"
+        src: "../{{ py_file }}"
+        dest: "/usr/src/{{ py_file }}"
     - name: Run application
       environment:
         PATH: "{{ paths.spark }}:{{ paths.spark }}/bin:{{ ansible_env.PATH }}:{{ paths.java }}/bin:{{ paths.java }}/jre/bin"
@@ -58,7 +62,7 @@
             --executor-memory {{ node_config.spark_submit_executor_memory }}
             --executor-cores {{ node_config.spark_submit_executor_cores }}
             --num-executors {{ node_config.spark_submit_num_executors }}
-            /usr/src/clustering_experiment.py
+            /usr/src/{{ py_file }}
             /data/{{ data_file }}
       register: application_logs
     - debug:
