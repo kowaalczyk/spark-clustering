@@ -76,6 +76,20 @@ def logged_kwargs(func):
 
 
 @timed
+def read_and_repartition(in_file, spark: SparkSession):
+    logger = YarnLogger()
+
+    n_executors = int(spark.conf.get("spark.executor.instances", "1"))
+    n_cores = int(spark.conf.get("spark.executor.cores", "1"))
+    n_partitions = 2 * n_executors * n_cores
+    logger.info(f"reading {in_file} into {n_partitions} partitions")
+
+    df = spark.read.parquet(in_file).repartition(n_partitions).cache()
+    logger.debug(f"df.schema={df.schema}")
+    return df
+
+
+@timed
 def fit(model_algo, df):
     model = model_algo.fit(df)
     return model
@@ -108,8 +122,7 @@ def perform_clustering_kmeans(in_file, distance, k, ModelCls):
     spark = SparkSession.builder.getOrCreate()
     logger = YarnLogger()
 
-    df = spark.read.parquet(in_file).cache()
-    logger.debug(f"df.schema={df.schema}")
+    df = read_and_repartition(in_file, spark)
 
     features_column = "features"
     prediction_column = "cluster"
@@ -173,8 +186,7 @@ def perform_clustering_gaussian(in_file, k):
     spark = SparkSession.builder.getOrCreate()
     logger = YarnLogger()
 
-    df = spark.read.parquet(in_file).cache()
-    logger.debug(f"df.schema={df.schema}")
+    df = read_and_repartition(in_file, spark)
 
     # TODO: Perform min-max scaling - but only when CountVectorizer was used in non-binary mode:
     # feature_column_name = "features"
@@ -281,10 +293,17 @@ if __name__ == "__main__":
 
     result_dfs = []
 
-    in_files = ["/data/df_3-shingles_sparse-binary-vectors.parquet"]
-    distances = ["euclidean", "cosine"]
-    models = [GaussianMixture]
-    ks = list(range(2,6,2))
+    in_files = [
+        "/data/df_3-shingles_sparse-binary-vectors.parquet",
+        "/data/df_3-shingles_sparse-count-vectors.parquet",
+        "/data/df_4-shingles_sparse-binary-vectors.parquet",
+        "/data/df_4-shingles_sparse-count-vectors.parquet",
+        "/data/df_5-shingles_sparse-binary-vectors.parquet",
+        "/data/df_5-shingles_sparse-count-vectors.parquet",
+    ]
+    distances = ["cosine", "euclidean"]
+    models = [KMeans, BisectingKMeans]  # GaussianMixture fails - not enough memory
+    ks = list(range(2, 20))
     perform_experiment(
         in_files=in_files,
         distances=distances,

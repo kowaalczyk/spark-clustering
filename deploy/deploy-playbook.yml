@@ -244,8 +244,10 @@
           - "numpy"
           - "pandas"
           - "matplotlib"
+          - "seaborn"
           - "py4j"
           - "pyspark"
+          - "pyarrow"
 
 # 5. setup .bash_profile for easy access via ssh and run spark examples on yarn
 - hosts: master

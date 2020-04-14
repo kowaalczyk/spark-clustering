@@ -1,3 +1,5 @@
 *.fasta
 *.tab
 *.gz
+*.csv
+*.parquet

@@ -53,6 +53,10 @@
       template:
         src: "master/jupyter.service.j2"
         dest: "/etc/systemd/system/jupyter.service"
+    - name: Copy jupyter notebooks
+      copy:
+        src: "master/notebooks/summary.ipynb"
+        dest: "{{ paths.jupyter_notebooks }}/summary.ipynb"
     - name: Start jupyter service
       systemd:
         name: jupyter
@@ -66,4 +70,3 @@
       register: jupyter_logs
     - debug:
         var: jupyter_logs.stdout_lines
-    # TODO: Copy example notebook for reference

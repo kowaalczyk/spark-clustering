@@ -7,7 +7,7 @@ import itertools
 
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import udf
-from pyspark.sql.types import ArrayType, StringType
+from pyspark.sql.types import ArrayType, StringType, FloatType
 
 from pyspark.ml.feature import NGram, CountVectorizer, MinMaxScaler
 from pyspark.ml.linalg import Vectors, VectorUDT
@@ -73,6 +73,24 @@ def logged_kwargs(func):
     return wrapper
 
 
+@timed
+def read_and_repartition(in_file, spark: SparkSession):
+    logger = YarnLogger()
+
+    n_executors = int(spark.conf.get("spark.executor.instances", "1"))
+    n_cores = int(spark.conf.get("spark.executor.cores", "1"))
+    n_partitions = 2 * n_executors * n_cores
+    logger.info(f"reading {in_file} into {n_partitions} partitions")
+
+    df = (
+        spark.read.csv(in_file, sep="\t", header=True, inferSchema=True)
+        .repartition(n_partitions)
+        .cache()
+    )
+    logger.debug(f"df.schema={df.schema}")
+    return df
+
+
 @udf(returnType=ArrayType(StringType()))
 def toTokenList(x):
     """ String to list of characters (tokens) """
@@ -83,6 +101,11 @@ def toTokenList(x):
 def toDenseVector(x):
     """ Sparse vector to dense vector """
     return Vectors.dense(x)
+
+
+@udf(returnType=FloatType())
+def vectorSum(x):
+    return float(x.norm(0))
 
 
 @timed
@@ -101,7 +124,7 @@ def preprocess_df(
     logger.info(f"in_file = '{in_file}'")
     logger.info(f"n_shingles = ''")
 
-    raw_df = spark.read.csv(in_file, sep="\t", header=True, inferSchema=True,)
+    raw_df = read_and_repartition(in_file, spark)
     logger.debug(f"raw_df.schema={raw_df.schema}")
 
     token_column_name = "sequence_tokens"
@@ -122,22 +145,29 @@ def preprocess_df(
         outputCol="sequence_vector",
     )
     vectorizer = vectorizer.fit(df_shingle)
-    df_vectorized = vectorizer.transform(df_shingle)
+    df_vectorized = vectorizer.transform(df_shingle).cache()
     logger.debug(f"df_vectorized.schema={df_vectorized.schema}")
+
+    samples_before_dropped = df_vectorized.count()
+    df_dropped = df_vectorized.where(vectorSum(vectorizer.getOutputCol()) > 0).cache()
+    samples_dropped = samples_before_dropped - df_dropped.count()
+    logger.warning(
+        f"dropped {samples_dropped} samples with feature vector norm == 0 (out of {samples_before_dropped} total samples)"
+    )
 
     feature_column_name = "features"
     if use_dense_vectors:
-        df_features = df_vectorized.select(
-            df_vectorized["entry"],
-            df_vectorized["entry_name"],
+        df_features = df_dropped.select(
+            df_dropped["entry"],
+            df_dropped["entry_name"],
             toDenseVector(vectorizer.getOutputCol()).alias(feature_column_name),
         )
     else:
         # vectorizer output is sparse by default
-        df_features = df_vectorized.select(
-            df_vectorized["entry"],
-            df_vectorized["entry_name"],
-            df_vectorized[vectorizer.getOutputCol()].alias(feature_column_name),
+        df_features = df_dropped.select(
+            df_dropped["entry"],
+            df_dropped["entry_name"],
+            df_dropped[vectorizer.getOutputCol()].alias(feature_column_name),
         )
     logger.debug(f"df_features.schema={df_features.schema}")
 
@@ -151,7 +181,7 @@ def preprocess_df(
 
 
 if __name__ == "__main__":
-    spark = SparkSession.builder.appName("ClusteringExperiment").getOrCreate()
+    spark = SparkSession.builder.appName("Preprocessing").getOrCreate()
 
     YarnLogger.setup_logger()
     logger = YarnLogger()

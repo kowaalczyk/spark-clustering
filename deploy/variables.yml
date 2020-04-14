@@ -15,27 +15,29 @@ paths:
 # node_config:  # for slaves: 2x C-2 droplet
 #   mapreduce_map_memory: 3072
 #   mapreduce_map_java_heapsize: 2560  # ~80% of mapreduce_map_memory
-#   mapreduce_reduce_memory: 6144
-#   mapreduce_reduce_java_heap_size: 5120  # ~80% of mapreduce_reduce_memory
-#   yarn_resource_memory: 7168
+#   mapreduce_reduce_memory: 3072
+#   mapreduce_reduce_java_heap_size: 2560  # ~80% of mapreduce_reduce_memory
+#   yarn_resource_memory: 3072
 #   yarn_scheduler_min_allocation_memory: 512
-#   yarn_scheduler_max_allocation_memory: 7168
+#   yarn_scheduler_max_allocation_memory: 3072
 #   spark_submit_driver_memory: "2g"
-#   spark_submit_executor_memory: "1g"
-#   spark_submit_executor_cores: "2"
+#   spark_submit_driver_cores: "1"
+#   spark_submit_executor_memory: "2g"
+#   spark_submit_executor_cores: "1"
 #   spark_submit_num_executors: "2"
 # node_config:  # for slaves: 2x C-4 droplet
 #   mapreduce_map_memory: 7168
 #   mapreduce_map_java_heapsize: 6144  # ~80% of mapreduce_map_memory
-#   mapreduce_reduce_memory: 14336
-#   mapreduce_reduce_java_heap_size: 12288  # ~80% of mapreduce_reduce_memory
-#   yarn_resource_memory: 15360
+#   mapreduce_reduce_memory: 7168
+#   mapreduce_reduce_java_heap_size: 6144  # ~80% of mapreduce_reduce_memory
+#   yarn_resource_memory: 7168
 #   yarn_scheduler_min_allocation_memory: 1024
-#   yarn_scheduler_max_allocation_memory: 15360
-#   spark_submit_driver_memory: "2g"
-#   spark_submit_executor_memory: "3g"
-#   spark_submit_executor_cores: "2"
-#   spark_submit_num_executors: "3"
+#   yarn_scheduler_max_allocation_memory: 7168
+#   spark_submit_driver_memory: "6g"
+#   spark_submit_driver_cores: "3"
+#   spark_submit_executor_memory: "2g"
+#   spark_submit_executor_cores: "1"
+#   spark_submit_num_executors: "4"
 node_config:  # for slaves: 2x C-8 droplet
   mapreduce_map_memory: 9216
   mapreduce_map_java_heapsize: 7372  # ~80% of mapreduce_map_memory

@@ -81,10 +81,30 @@ it in the preprocessing pipeline, since min-max scaling is only necessary for th
 `GaussianMixture` model running on output from non-binary `CountVectorizer`. Without
 that change, the preprocessing pipeline would run 30-90 minutes longer.
 
+For the largest shingle size (5), count vectorizer can return empty vectors.
+This is due to the fact that it uses `max_vocab_size=2**18` and there are
+`20**5 ~= 2**22` possible shingles of length 5. With a dense matrix and standard
+64-bit floats, the dataset would occupy 4TB of RAM - with sparse matrices this is
+surely much lower, but still not enough to fit on a machine with 16GB RAM. After
+further investigation, I found out that the number of samples with empty feature
+vectors is exactly 102 - a small portion of the dataset, so I decided to drop them
+all (models with cosine similarity cannot handle vectors with norm 0).
+
 Filtered Python logs from the final run of preprocessing are located in 
 [`logs/preprocess-sparse-python.log`](logs/preprocess-sparse-python.log).
 
 
 ### Comparison of clustering approaches
 
-- TODO
+#### Gaussian Mixture Model
+
+For the same reason that dense matrices are extremely slow in preprocessing,
+GMMs don't work at all - they crash due to low memory during conversion from
+sparse to dense matrix in [this file](https://github.com/apache/spark/blob/cee4ecbb16917fa85f02c635925e2687400aa56b/mllib/src/main/scala/org/apache/spark/mllib/stat/distribution/MultivariateGaussian.scala#L121).
+
+I tried to re-partition the data into more partitions before fitting GMM, but
+it did not help.
+
+For details, see logs attached in [`logs/clustering-2-all.log`](logs/clustering-2-all.log).
+
+- TODO: Run on executors with more memory, perform dense matrix conversion explicitly
