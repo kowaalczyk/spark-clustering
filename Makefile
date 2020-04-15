@@ -1,4 +1,4 @@
-all: deploy preprocess
+all: deploy preprocess clustering notebook
 
 deploy notebook:
 	ANSIBLE_NOCOWS=1 ansible-playbook \

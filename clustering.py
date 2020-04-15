@@ -189,6 +189,7 @@ def perform_clustering_gaussian(in_file, k):
     df = read_and_repartition(in_file, spark)
 
     # TODO: Perform min-max scaling - but only when CountVectorizer was used in non-binary mode:
+    # (actually this isn't necessary, since we don't use Gaussian Mixture Models)
     # feature_column_name = "features"
     # scaler = MinMaxScaler(inputCol=vector_column_name, outputCol=feature_column_name)
     # scaler = scaler.fit(df_features)

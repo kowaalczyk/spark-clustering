@@ -9,9 +9,6 @@ paths:
   hdfs: "/hdfsdata"
   spark: "{{ prefix }}/{{ spark_version }}-bin-without-hadoop"
   jupyter_notebooks: "{{ prefix }}/notebooks"
-# https://docs.cloudera.com/HDPDocuments/HDP2/HDP-2.6.4/bk_command-line-installation/content/determine-hdp-memory-config.html
-# https://www.alibabacloud.com/help/doc-detail/28124.htm
-# or even better: https://c2fo.io/c2fo/spark/aws/emr/2016/07/06/apache-spark-config-cheatsheet/
 # node_config:  # for slaves: 2x C-2 droplet
 #   mapreduce_map_memory: 3072
 #   mapreduce_map_java_heapsize: 2560  # ~80% of mapreduce_map_memory
@@ -51,18 +48,3 @@ node_config:  # for slaves: 2x C-8 droplet
   spark_submit_executor_memory: "6g"
   spark_submit_executor_cores: "3"
   spark_submit_num_executors: "3"
-
-# Num Container=3
-#  Container Ram=4608MB
-#  Used Ram=13GB
-#  Unused Ram=2GB
-#  yarn.scheduler.minimum-allocation-mb=4608
-#  yarn.scheduler.maximum-allocation-mb=13824
-#  yarn.nodemanager.resource.memory-mb=13824
-#  mapreduce.map.memory.mb=4608
-#  mapreduce.map.java.opts=-Xmx3686m
-#  mapreduce.reduce.memory.mb=4608
-#  mapreduce.reduce.java.opts=-Xmx3686m
-#  yarn.app.mapreduce.am.resource.mb=4608
-#  yarn.app.mapreduce.am.command-opts=-Xmx3686m
-#  mapreduce.task.io.sort.mb=1843

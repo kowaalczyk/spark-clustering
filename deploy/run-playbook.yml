@@ -33,7 +33,7 @@
         creates: "{{ prefix }}/{{ data_file }}"
       register: unarchive_result
     - name: Add data to hdfs
-      # TODO: Make this work correctly:
+      # TODO: Make this work correctly (instead of ignoring errors, skip when exists)
       when: unarchive_result is not skipped
       block:
         - name: Create hdfs dir
